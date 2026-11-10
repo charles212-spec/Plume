@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#285b4d">
+<title>Plume — Correcteur de texte</title>
+<meta name="description" content="Plume, un correcteur de texte accessible avec un compte personnel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f7f2;--card:#fff;--ink:#202720;--muted:#69736b;--line:#e1e7df;--accent:#285b4d;--accent-ink:#fff;--error:#ffebe8;--error-line:#c94d42;--ok:#e6f4eb;--shadow:0 8px 28px #243b2a0d}
+:root[data-theme=dark]{--bg:#151a18;--card:#202824;--ink:#eef3ef;--muted:#a7b2aa;--line:#35433b;--accent:#7fc4a6;--accent-ink:#10251b;--error:#442825;--error-line:#ef8377;--ok:#203a2c;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Atkinson Hyperlegible",system-ui,sans-serif}
+main{max-width:980px;margin:auto;padding:30px 18px 60px}header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:25px}
+h1{font-size:30px;line-height:1.1;margin:0}h2{font-size:19px;margin:0 0 12px}.sub{margin:5px 0 0;color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:18px;box-shadow:var(--shadow);margin:14px 0}
+.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.spread{justify-content:space-between}
+button,input,select,textarea{font:inherit}button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}button:disabled{opacity:.55;cursor:not-allowed}
+input,select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px;min-height:42px}
+input[type=email],input[type=password]{width:100%}label{display:block;font-size:14px;color:var(--muted);margin:9px 0 4px}
+textarea{width:100%;min-height:260px;resize:vertical;border:0;outline:0;background:transparent;color:var(--ink);line-height:1.7;font-size:17px}
+.editor{border:1px solid var(--line);border-radius:13px;padding:12px;background:var(--card)}
+.muted{color:var(--muted);font-size:13px}.status{font-size:14px;color:var(--muted);min-height:22px}
+.hidden{display:none!important}.auth{max-width:470px;margin:50px auto}.auth form{display:grid;gap:7px}.auth .tabs{display:flex;gap:8px;margin-bottom:12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.pill{border:1px solid var(--line);background:var(--bg);border-radius:30px;padding:4px 10px;font-size:13px}
+.issue{border:1px solid var(--line);border-radius:12px;padding:13px;margin:9px 0;background:var(--card)}.issue strong{display:block}.issue .wrong{color:var(--error-line);text-decoration:line-through}.issue .right{color:var(--accent);font-weight:700}.issue p{margin:7px 0;color:var(--muted);font-size:14px}
+mark{background:var(--error);border-bottom:2px solid var(--error-line);color:var(--ink);border-radius:3px;padding:0 2px}
+.preview{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;padding:13px;background:var(--bg);border-radius:10px}
+.notice{padding:12px 14px;border-radius:11px;background:var(--ok);margin:12px 0}.error{padding:12px 14px;border-radius:11px;background:var(--error);color:var(--ink);margin:12px 0}
+.history-item{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid var(--line);padding:10px 0}.history-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+footer{text-align:center;color:var(--muted);font-size:12px;margin:30px 0}
+@media(max-width:600px){main{padding:18px 12px 40px}header{align-items:flex-start}h1{font-size:25px}.card{padding:14px}.row button{flex:1 1 auto}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+</head>
+<body>
+<main>
+<header>
+  <div class="brand"><div class="logo">✍</div><div><h1>Plume</h1><p class="sub">Un texte plus clair, une correction à la fois.</p></div></div>
+  <div class="row"><button id="themeBtn" type="button" aria-label="Changer le thème">☾ Thème</button><button id="logoutBtn" class="hidden" type="button">Déconnexion</button></div>
+</header>
+
+<section id="authPanel" class="card auth">
+  <h2 id="authTitle">Bienvenue sur Plume</h2>
+  <p class="muted">Créez un compte ou connectez-vous pour utiliser le correcteur.</p>
+  <div class="tabs"><button id="loginTab" class="primary" type="button">Connexion</button><button id="signupTab" type="button">Créer un compte</button></div>
+  <form id="authForm">
+    <label for="email">Adresse courriel</label><input id="email" type="email" autocomplete="email" required maxlength="254">
+    <label for="password">Mot de passe</label><input id="password" type="password" autocomplete="current-password" required minlength="8">
+    <button id="authSubmit" class="primary" type="submit">Se connecter</button>
+  </form>
+  <p id="authStatus" class="status" role="status" aria-live="polite"></p>
+  <p class="muted">Un courriel de confirmation peut être nécessaire lors de l'inscription.</p>
+</section>
+
+<section id="appPanel" class="hidden">
+  <div class="card">
+    <div class="row spread"><div><h2>Votre texte</h2><p class="muted">Vos textes ne sont pas enregistrés sur le serveur par cette version.</p></div><span id="wordCount" class="pill">0 mot</span></div>
+    <div class="editor"><textarea id="sourceText" placeholder="Écrivez ou collez votre texte ici…" spellcheck="false" maxlength="12000"></textarea></div>
+    <div class="row spread" style="margin-top:12px">
+      <div class="row">
+        <select id="language" aria-label="Langue de correction"><option value="auto">Détection automatique</option><option value="fr">Français</option><option value="fr-CA">Français (Canada)</option><option value="en-US">Anglais</option><option value="es">Espagnol</option><option value="de-DE">Allemand</option></select>
+        <label style="margin:0;display:flex;align-items:center;gap:7px"><input type="checkbox" id="picky"> Signaler aussi les suggestions de style</label>
+      </div>
+      <div class="row"><button id="clearBtn" type="button">Effacer</button><button id="correctBtn" class="primary" type="button">Corriger mon texte</button></div>
+    </div>
+    <p id="appStatus" class="status" role="status" aria-live="polite">Connectez-vous pour commencer.</p>
+  </div>
+  <div id="results"></div>
+  <div class="card">
+    <div class="row spread"><h2>Historique sur cet appareil</h2><button id="clearHistoryBtn" type="button">Effacer l’historique</button></div>
+    <p class="muted">L'historique reste dans le navigateur utilisé. Il ne se synchronise pas encore entre appareils.</p>
+    <div id="historyList"></div>
+  </div>
+</section>
+<footer>Plume · Version indépendante en développement · Les suggestions doivent être relues avant utilisation.</footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const CONFIG = window.PLUME_CONFIG || {};
+  const hasConfig = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY &&
+    !String(CONFIG.SUPABASE_URL).includes("REMPLACER") &&
+    !String(CONFIG.SUPABASE_ANON_KEY).includes("REMPLACER"));
+  let supabase = null, session = null, authMode = "login", issues = [], correctedText = "";
+  const MAX_CHARS = 12000;
+  const userKey = suffix => `plume_${session?.user?.id || "local"}_${suffix}`;
+
+  function status(message, isError=false) {
+    $("appStatus").textContent = message;
+    $("appStatus").className = "status" + (isError ? " error" : "");
+  }
+  function authStatus(message, isError=false) {
+    $("authStatus").textContent = message;
+    $("authStatus").className = "status" + (isError ? " error" : "");
+  }
+  function setMode(mode) {
+    authMode = mode;
+    $("authTitle").textContent = mode === "login" ? "Bienvenue sur Plume" : "Créer votre compte Plume";
+    $("authSubmit").textContent = mode === "login" ? "Se connecter" : "Créer mon compte";
+    $("loginTab").classList.toggle("primary", mode === "login");
+    $("signupTab").classList.toggle("primary", mode === "signup");
+    $("password").autocomplete = mode === "login" ? "current-password" : "new-password";
+    authStatus("");
+  }
+  function showSession(s) {
+    session = s;
+    const connected = !!s;
+    $("authPanel").classList.toggle("hidden", connected);
+    $("appPanel").classList.toggle("hidden", !connected);
+    $("logoutBtn").classList.toggle("hidden", !connected);
+    if (connected) {
+      $("appStatus").textContent = `Connecté : ${s.user.email || "compte Plume"}.`;
+      loadHistory();
+    }
+  }
+  function escapeText(s) {
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function updateCount() {
+    const value = $("sourceText").value;
+    const count = value.trim() ? value.trim().split(/\s+/).length : 0;
+    $("wordCount").textContent = `${count} mot${count === 1 ? "" : "s"} · ${value.length}/${MAX_CHARS}`;
+    localStorage.setItem(userKey("draft"), value);
+  }
+  function saveHistory(original, fixed, count) {
+    const key = userKey("history");
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+    list.unshift({date:Date.now(), original, fixed, count});
+    localStorage.setItem(key, JSON.stringify(list.slice(0,12)));
+    loadHistory();
+  }
+  function loadHistory() {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(userKey("history")) || "[]"); } catch {}
+    const root = $("historyList"); root.replaceChildren();
+    if (!list.length) { root.textContent = "Aucune correction enregistrée."; return; }
+    list.forEach(item => {
+      const row = document.createElement("div"); row.className = "history-item";
+      const label = document.createElement("span");
+      label.textContent = `${new Date(item.date).toLocaleString("fr-CA")} · ${item.original.slice(0,65)}`;
+      const restore = document.createElement("button"); restore.textContent = "Restaurer";
+      restore.onclick = () => { $("sourceText").value = item.original; updateCount(); status("Texte restauré."); window.scrollTo({top:0,behavior:"smooth"}); };
+      row.append(label, restore); root.append(row);
+    });
+  }
+  function renderResults() {
+    const root = $("results"); root.replaceChildren();
+    const count = issues.length;
+    const summary = document.createElement("div"); summary.className = "stats";
+    const pill = document.createElement("span"); pill.className = "pill";
+    pill.textContent = `${count} suggestion${count===1?"":"s"}`;
+    summary.append(pill); root.append(summary);
+    if (!count) {
+      const note = document.createElement("div"); note.className = "notice";
+      note.textContent = "Aucune suggestion détectée. Cela ne garantit pas que le texte est parfait : relisez-le.";
+      root.append(note); return;
+    }
+    const preview = document.createElement("div"); preview.className = "card";
+    const heading = document.createElement("h2"); heading.textContent = "Texte avec les passages signalés";
+    const content = document.createElement("div"); content.className = "preview";
+    let cursor = 0;
+    issues.forEach(issue => {
+      content.append(document.createTextNode(correctedText.slice(cursor, issue.offset)));
+      const mark = document.createElement("mark");
+      mark.textContent = correctedText.slice(issue.offset, issue.offset + issue.length);
+      mark.title = issue.message || "Suggestion";
+      content.append(mark); cursor = issue.offset + issue.length;
+    });
+    content.append(document.createTextNode(correctedText.slice(cursor)));
+    preview.append(heading, content); root.append(preview);
+    issues.forEach((issue, index) => {
+      const card = document.createElement("article"); card.className = "issue";
+      const title = document.createElement("strong");
+      title.textContent = `${index+1}. ${issue.category || "Correction"} · ${issue.ruleId || "Suggestion"}`;
+      const change = document.createElement("div");
+      const old = document.createElement("span"); old.className = "wrong"; old.textContent = issue.original;
+      const arrow = document.createTextNode(" → ");
+      const next = document.createElement("span"); next.className = "right"; next.textContent = issue.replacement;
+      change.append(old, arrow, next);
+      const explanation = document.createElement("p"); explanation.textContent = issue.message || "Suggestion de correction.";
+      const buttons = document.createElement("div"); buttons.className = "row";
+      const accept = document.createElement("button"); accept.className = "primary"; accept.textContent = "Accepter";
+      accept.onclick = () => applyIssue(index);
+      const ignore = document.createElement("button"); ignore.textContent = "Ignorer";
+      ignore.onclick = () => { issues.splice(index,1); renderResults(); };
+      buttons.append(accept, ignore); card.append(title, change, explanation, buttons); root.append(card);
+    });
+    const actions = document.createElement("div"); actions.className = "card row";
+    const applyAll = document.createElement("button"); applyAll.className = "primary"; applyAll.textContent = "Accepter toutes les suggestions";
+    applyAll.onclick = () => {
+      let value = correctedText;
+      [...issues].sort((a,b)=>b.offset-a.offset).forEach(i => { value = value.slice(0,i.offset)+i.replacement+value.slice(i.offset+i.length); });
+      $("sourceText").value = value; updateCount(); issues=[]; correctedText=value; renderResults(); status("Corrections appliquées. Relisez le résultat.");
+    };
+    const copy = document.createElement("button"); copy.textContent = "Copier le texte corrigé";
+    copy.onclick = async () => { try { await navigator.clipboard.writeText(correctedText); status("Texte copié."); } catch { status("Copie impossible dans ce navigateur.",true); } };
+    const download = document.createElement("button"); download.textContent = "Télécharger .txt";
+    download.onclick = () => {
+      const blob = new Blob([correctedText],{type:"text/plain;charset=utf-8"});
+      const url = URL.createObjectURL(blob); const a=document.createElement("a");
+      a.href=url; a.download="plume-texte-corrige.txt"; a.click(); URL.revokeObjectURL(url);
+    };
+    actions.append(applyAll,copy,download); root.append(actions);
+  }
+  function applyIssue(index) {
+    const issue = issues[index];
+    correctedText = correctedText.slice(0,issue.offset)+issue.replacement+correctedText.slice(issue.offset+issue.length);
+    const delta = issue.replacement.length - issue.length;
+    issues.splice(index,1);
+    issues.forEach(other => { if (other.offset > issue.offset) other.offset += delta; });
+    $("sourceText").value = correctedText; updateCount(); renderResults();
+    status("Suggestion acceptée.");
+  }
+  async function correct() {
+    const input = $("sourceText").value;
+    if (!input.trim()) { status("Écrivez ou collez un texte avant de le corriger.",true); return; }
+    if (input.length > MAX_CHARS) { status(`Limite : ${MAX_CHARS} caractères par demande.`,true); return; }
+    if (!session?.access_token) { status("Connectez-vous pour corriger un texte.",true); return; }
+    $("correctBtn").disabled = true; $("results").replaceChildren(); status("Analyse du texte en cours…");
+    try {
+      const response = await fetch("/api/correct", {
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
+        body:JSON.stringify({text:input,language:$("language").value,style:$("picky").checked})
+      });
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(data.error || `Erreur serveur (${response.status})`);
+      correctedText = input;
+      issues = (data.issues || []).map(x => ({
+        offset:Number(x.offset), length:Number(x.length), original:String(x.original || ""),
+        replacement:String(x.replacement || ""), message:String(x.message || ""),
+        category:String(x.category || "Correction"), ruleId:String(x.ruleId || "")
+      })).filter(x => Number.isInteger(x.offset) && x.offset >= 0 && x.length > 0 &&
+        x.offset+x.length <= input.length && x.original === input.slice(x.offset,x.offset+x.length) &&
+        x.replacement !== x.original && x.replacement.length <= 500)
+        .sort((a,b)=>a.offset-b.offset);
+      const nonOverlapping=[];
+      for (const item of issues) {
+        const prev=nonOverlapping[nonOverlapping.length-1];
+        if (!prev || item.offset >= prev.offset+prev.length) nonOverlapping.push(item);
+      }
+      issues=nonOverlapping;
+      renderResults();
+      saveHistory(input,input,issues.length);
+      status(`${issues.length} suggestion(s) trouvée(s). Vérifiez chaque proposition.`);
+    } catch (error) {
+      status(error.message || "La correction n'a pas fonctionné. Réessayez plus tard.",true);
+    } finally { $("correctBtn").disabled=false; }
+  }
+  async function initAuth() {
+    if (!hasConfig || !window.supabase?.createClient) {
+      authStatus("Configuration manquante : ajoutez l’URL et la clé publique Supabase dans config.js, puis rechargez cette page.",true);
+      $("authSubmit").disabled = true;
+      return;
+    }
+    supabase = window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY,{
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+    });
+    const {data:{session:existing}} = await supabase.auth.getSession();
+    showSession(existing);
+    supabase.auth.onAuthStateChange((_event,newSession)=>showSession(newSession));
+  }
+  $("loginTab").onclick=()=>setMode("login");
+  $("signupTab").onclick=()=>setMode("signup");
+  $("authForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    if (!supabase) { authStatus("Supabase n'est pas encore configuré.",true); return; }
+    const email=$("email").value.trim(), password=$("password").value;
+    $("authSubmit").disabled=true; authStatus("Un instant…");
+    try {
+      if (authMode==="signup") {
+        const {data,error}=await supabase.auth.signUp({email,password});
+        if(error) throw error;
+        authStatus(data.session ? "Compte créé. Vous êtes connecté." : "Compte créé. Consultez votre courriel pour confirmer l'adresse.");
+      } else {
+        const {error}=await supabase.auth.signInWithPassword({email,password});
+        if(error) throw error;
+        authStatus("Connexion réussie.");
+      }
+    } catch(error) { authStatus(error.message || "Connexion impossible.",true); }
+    finally { $("authSubmit").disabled=false; }
+  });
+  $("logoutBtn").onclick=async()=>{ if(supabase) await supabase.auth.signOut(); showSession(null); };
+  $("correctBtn").onclick=correct;
+  $("sourceText").addEventListener("input",updateCount);
+  $("clearBtn").onclick=()=>{ $("sourceText").value="";updateCount();$("results").replaceChildren();status("Texte effacé."); };
+  $("clearHistoryBtn").onclick=()=>{ localStorage.removeItem(userKey("history"));loadHistory(); };
+  $("themeBtn").onclick=()=>{ const dark=document.documentElement.dataset.theme!=="dark";document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("plume_theme",dark?"dark":"light"); };
+  $("sourceText").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")correct();});
+  const savedTheme=localStorage.getItem("plume_theme"); if(savedTheme)document.documentElement.dataset.theme=savedTheme;
+  setMode("login"); initAuth().catch(e=>authStatus(e.message,true));
+})();
+</script>
+</body>
+</html>
